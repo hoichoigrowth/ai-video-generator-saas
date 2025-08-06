@@ -1,0 +1,70 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    container_name: ai-video-generator-app
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+      - ./uploads:/app/uploads
+      - ./results:/app/results
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MONGODB_URI=mongodb://mongo:27017/
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo
+      - redis
+
+  mongo:
+    image: mongo:6.0
+    container_name: ai-video-generator-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7.2
+    container_name: ai-video-generator-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  celery:
+    build: .
+    container_name: ai-video-generator-celery
+    command: celery -A core.pipeline worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - app
+      - mongo
+      - redis
+
+  flower:
+    image: mher/flower:2.0.1
+    container_name: ai-video-generator-flower
+    command: flower --broker=redis://redis:6379/0 --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery
+
+volumes:
+  mongo_data:
+  redis_data:

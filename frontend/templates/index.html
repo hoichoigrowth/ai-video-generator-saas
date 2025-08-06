@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Video Generator Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+  <header class="bg-white shadow p-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-800">AI Video Generator</h1>
+    <span class="text-gray-500 text-sm">Professional Script-to-Video Automation</span>
+  </header>
+  <main class="flex-1 flex flex-col items-center py-8 px-4">
+    <!-- Project Creation -->
+    <form id="project-form" class="w-full max-w-xl bg-white rounded-lg shadow p-6 mb-8">
+      <div class="mb-4">
+        <label class="block text-gray-700 font-semibold mb-2" for="project-name">Project Name</label>
+        <input id="project-name" name="project-name" type="text" required class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Enter project name...">
+      </div>
+      <div class="mb-4">
+        <label class="block text-gray-700 font-semibold mb-2">Upload Script</label>
+        <div id="dropzone" class="flex items-center justify-center w-full h-32 border-2 border-dashed border-blue-400 rounded bg-blue-50 cursor-pointer transition hover:bg-blue-100">
+          <span id="dropzone-text" class="text-blue-500">Drag & drop your script file here, or click to select</span>
+          <input id="file-input" type="file" accept=".txt,.md,.rtf" class="hidden" />
+        </div>
+      </div>
+      <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700 transition">Create Project</button>
+    </form>
+
+    <!-- Progress Timeline -->
+    <div class="w-full max-w-3xl mb-8">
+      <ol id="progress-timeline" class="flex flex-col md:flex-row justify-between items-center">
+        <li class="flex-1 flex flex-col items-center mb-4 md:mb-0">
+          <div class="stage-dot" id="stage-input"></div>
+          <span class="stage-label">Input</span>
+        </li>
+        <li class="flex-1 flex flex-col items-center mb-4 md:mb-0">
+          <div class="stage-dot" id="stage-screenplay_formatted"></div>
+          <span class="stage-label">Screenplay Formatted</span>
+        </li>
+        <li class="flex-1 flex flex-col items-center mb-4 md:mb-0">
+          <div class="stage-dot" id="stage-screenplay_merged"></div>
+          <span class="stage-label">Merged</span>
+        </li>
+        <li class="flex-1 flex flex-col items-center mb-4 md:mb-0">
+          <div class="stage-dot" id="stage-shots_broken"></div>
+          <span class="stage-label">Shots Broken</span>
+        </li>
+        <li class="flex-1 flex flex-col items-center mb-4 md:mb-0">
+          <div class="stage-dot" id="stage-characters_extracted"></div>
+          <span class="stage-label">Characters</span>
+        </li>
+        <li class="flex-1 flex flex-col items-center mb-4 md:mb-0">
+          <div class="stage-dot" id="stage-image_prompts_generated"></div>
+          <span class="stage-label">Image Prompts</span>
+        </li>
+        <li class="flex-1 flex flex-col items-center mb-4 md:mb-0">
+          <div class="stage-dot" id="stage-final"></div>
+          <span class="stage-label">Final</span>
+        </li>
+      </ol>
+    </div>
+
+    <!-- Real-Time Status & Approval -->
+    <div id="status-section" class="w-full max-w-xl bg-white rounded-lg shadow p-6 mb-8 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-gray-800">Project Status</h2>
+        <span id="project-status" class="text-sm text-gray-500"></span>
+      </div>
+      <div id="status-details" class="mb-4 text-gray-700"></div>
+      <div id="approval-interface" class="mb-4 hidden">
+        <button id="approve-btn" class="bg-green-600 text-white px-4 py-2 rounded mr-2 hover:bg-green-700">Approve</button>
+        <button id="pause-btn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Pause</button>
+      </div>
+      <div id="download-section" class="hidden">
+        <a id="download-link" href="#" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Download Output</a>
+      </div>
+    </div>
+  </main>
+  <footer class="bg-white shadow p-4 text-center text-gray-400 text-xs">
+    &copy; 2024 AI Video Generator. All rights reserved.
+  </footer>
+
+  <style>
+    .stage-dot {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 9999px;
+      background: #e5e7eb;
+      border: 3px solid #cbd5e1;
+      margin-bottom: 0.5rem;
+      transition: background 0.3s, border 0.3s;
+    }
+    .stage-dot.active {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+    .stage-dot.completed {
+      background: #22c55e;
+      border-color: #22c55e;
+    }
+    .stage-label {
+      font-size: 0.9rem;
+      color: #374151;
+      font-weight: 500;
+    }
+  </style>
+  <script>
+    // --- Drag & Drop ---
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('bg-blue-100'); });
+    dropzone.addEventListener('dragleave', e => { e.preventDefault(); dropzone.classList.remove('bg-blue-100'); });
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('bg-blue-100');
+      fileInput.files = e.dataTransfer.files;
+      document.getElementById('dropzone-text').textContent = fileInput.files[0].name;
+    });
+    fileInput.addEventListener('change', e => {
+      document.getElementById('dropzone-text').textContent = fileInput.files[0].name;
+    });
+
+    // --- Project Creation & Upload ---
+    let currentProjectId = null;
+    document.getElementById('project-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const name = document.getElementById('project-name').value;
+      const file = fileInput.files[0];
+      if (!file) { alert('Please upload a script file.'); return; }
+      // Upload file
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await axios.post('/upload-script/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      currentProjectId = uploadRes.data.project_id;
+      // Create project
+      await axios.post('/projects/', { name });
+      document.getElementById('status-section').classList.remove('hidden');
+      connectWebSocket();
+      pollStatus();
+    });
+
+    // --- Progress Timeline ---
+    const stages = [
+      'input',
+      'screenplay_formatted',
+      'screenplay_merged',
+      'shots_broken',
+      'characters_extracted',
+      'image_prompts_generated',
+      'final'
+    ];
+    function updateTimeline(currentStage) {
+      let found = false;
+      stages.forEach(stage => {
+        const dot = document.getElementById('stage-' + stage);
+        dot.classList.remove('active', 'completed');
+        if (stage === currentStage) {
+          dot.classList.add('active');
+          found = true;
+        } else if (!found) {
+          dot.classList.add('completed');
+        }
+      });
+    }
+
+    // --- WebSocket for Real-Time Updates ---
+    let ws = null;
+    function connectWebSocket() {
+      if (!currentProjectId) return;
+      ws = new WebSocket(`ws://${window.location.host}/ws/${currentProjectId}`);
+      ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        updateStatus(data);
+      };
+      ws.onclose = function() {
+        setTimeout(connectWebSocket, 2000);
+      };
+    }
+
+    // --- Polling for Status ---
+    async function pollStatus() {
+      if (!currentProjectId) return;
+      try {
+        const res = await axios.get(`/status/${currentProjectId}`);
+        updateStatus(res.data);
+        setTimeout(pollStatus, 3000);
+      } catch (e) {
+        setTimeout(pollStatus, 5000);
+      }
+    }
+
+    // --- Status & Approval UI ---
+    function updateStatus(data) {
+      document.getElementById('project-status').textContent = data.status;
+      updateTimeline(data.checkpoint);
+      // Approval interface
+      const approval = document.getElementById('approval-interface');
+      if (['screenplay_formatted','screenplay_merged','shots_broken','characters_extracted','image_prompts_generated'].includes(data.checkpoint)) {
+        approval.classList.remove('hidden');
+      } else {
+        approval.classList.add('hidden');
+      }
+      // Download
+      const download = document.getElementById('download-section');
+      if (data.status === 'final') {
+        download.classList.remove('hidden');
+        document.getElementById('download-link').href = `/download/${currentProjectId}`;
+      } else {
+        download.classList.add('hidden');
+      }
+      // Details
+      document.getElementById('status-details').textContent = `Checkpoint: ${data.checkpoint || ''}`;
+    }
+
+    document.getElementById('approve-btn').onclick = async function() {
+      await axios.post(`/webhook/approval/${currentProjectId}`, { approved: true, checkpoint: stages[stages.indexOf(document.getElementById('project-status').textContent)+1] });
+    };
+    document.getElementById('pause-btn').onclick = async function() {
+      await axios.post(`/webhook/approval/${currentProjectId}`, { approved: false, checkpoint: document.getElementById('project-status').textContent });
+    };
+  </script>
+</body>
+</html>
