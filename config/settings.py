@@ -13,9 +13,18 @@ class Settings(BaseSettings):
     piapi_key: str
     gotohuman_api_key: Optional[str] = None
     
-    # Database
+    # Database (PostgreSQL - replacing MongoDB)
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_user: str = "postgres"
+    postgres_password: str = "postgres"
+    postgres_db: str = "ai_video_generator"
+    
+    # Legacy MongoDB (for migration period)
     mongodb_uri: str = "mongodb://localhost:27017/"
     mongodb_db_name: str = "ai_video_generator"
+    
+    # Redis (for caching and approval queues)
     redis_url: str = "redis://localhost:6379/0"
     
     # API Configuration
@@ -26,6 +35,13 @@ class Settings(BaseSettings):
     # Celery
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/1"
+    
+    # MinIO/S3 Storage (replacing Google Docs file storage)
+    minio_endpoint: str = "localhost:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_bucket_name: str = "ai-video-generator"
+    minio_secure: bool = False  # Use HTTPS
     
     # Environment
     environment: str = "development"

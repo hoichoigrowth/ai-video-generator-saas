@@ -1,5 +1,10 @@
 import asyncio
+from typing import Dict, Any, Optional
 from agents.base_agent import BaseAgent
+from langchain_core.messages import HumanMessage, SystemMessage
+from core.utils import sanitize_prompt, generate_unique_id, get_utc_now
+from core.exceptions import AgentProcessingError, ModelAPIError
+import time
 
 OPENAI_SCREENPLAY_PROMPT = """
 Convert the following script into professional screenplay format using industry standards.
@@ -65,7 +70,80 @@ Return only the complete, professionally formatted screenplay. No additional tex
 """
 
 class OpenAIScreenplayAgent(BaseAgent):
-    async def process(self, script_text: str):
-        prompt = OPENAI_SCREENPLAY_PROMPT.format(script=script_text)
-        llm = self.llms.get("openai")
-        return await asyncio.to_thread(self._run_with_retries, llm.invoke, prompt)
+    """OpenAI GPT-4 powered screenplay formatting agent with enhanced error handling"""
+    
+    async def process(self, script_text: str, custom_instructions: Optional[str] = None) -> Dict[str, Any]:
+        """Process script text into screenplay format using OpenAI GPT-4"""
+        processing_id = generate_unique_id()
+        start_time = time.time()
+        
+        try:
+            llm = self.llms.get("openai")
+            if not llm:
+                raise AgentProcessingError("OpenAIScreenplayAgent", "OpenAI LLM not configured")
+            
+            # Sanitize and validate input
+            sanitized_script = sanitize_prompt(script_text, max_length=8000)
+            if len(sanitized_script) < 100:
+                raise AgentProcessingError("OpenAIScreenplayAgent", "Script text too short for processing")
+            
+            # Prepare prompt
+            prompt = OPENAI_SCREENPLAY_PROMPT.format(script=sanitized_script)
+            if custom_instructions:
+                prompt += f"\n\nAdditional Instructions: {custom_instructions}"
+            
+            # Make the API call with retries
+            self.logger.info(f"[{processing_id}] Starting OpenAI screenplay processing")
+            
+            result = await asyncio.to_thread(
+                self._run_with_retries, 
+                llm.invoke, 
+                prompt
+            )
+            
+            processing_time = time.time() - start_time
+            screenplay_content = result.content if hasattr(result, 'content') else str(result)
+            
+            # Extract metadata if available
+            token_usage = getattr(result, 'response_metadata', {}).get('token_usage', {})
+            
+            response_data = {
+                "processing_id": processing_id,
+                "content": screenplay_content,
+                "provider": "openai",
+                "model": getattr(llm, 'model_name', 'gpt-4'),
+                "tokens_used": token_usage.get('total_tokens', 0),
+                "input_tokens": token_usage.get('prompt_tokens', 0),
+                "output_tokens": token_usage.get('completion_tokens', 0),
+                "processing_time": processing_time,
+                "timestamp": get_utc_now(),
+                "success": True
+            }
+            
+            self.logger.info(f"[{processing_id}] OpenAI screenplay processing completed in {processing_time:.2f}s")
+            return response_data
+            
+        except Exception as e:
+            error_msg = f"OpenAI screenplay formatting failed: {str(e)}"
+            self.logger.error(f"[{processing_id}] {error_msg}")
+            
+            if "rate_limit" in str(e).lower():
+                raise ModelAPIError("openai", f"Rate limit exceeded: {str(e)}")
+            elif "api_key" in str(e).lower():
+                raise ModelAPIError("openai", f"Invalid API key: {str(e)}")
+            else:
+                raise AgentProcessingError("OpenAIScreenplayAgent", error_msg)
+    
+    def estimate_cost(self, script_length: int) -> float:
+        """Estimate API cost for processing script"""
+        # GPT-4 pricing (approximate)
+        input_price_per_1k = 0.03
+        output_price_per_1k = 0.06
+        
+        estimated_input_tokens = script_length / 3  # rough estimate
+        estimated_output_tokens = script_length / 2  # screenplay tends to be longer
+        
+        input_cost = (estimated_input_tokens / 1000) * input_price_per_1k
+        output_cost = (estimated_output_tokens / 1000) * output_price_per_1k
+        
+        return input_cost + output_cost

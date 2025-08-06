@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Video Generator - Production Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Navigation -->
+  <nav class="bg-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex justify-between h-16">
+        <div class="flex items-center">
+          <i class="fas fa-video text-blue-600 text-2xl mr-2"></i>
+          <h1 class="text-xl font-bold text-gray-800">AI Video Generator Pro</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+          <button id="help-btn" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-question-circle"></i>
+          </button>
+          <button id="settings-btn" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-cog"></i>
+          </button>
+          <div class="text-sm text-gray-500">Demo User</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Project Creation Section -->
+    <div class="mb-8">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-gray-800">Create New Video Project</h2>
+          <button id="import-n8n-btn" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition">
+            <i class="fas fa-upload mr-2"></i>Import n8n Workflow
+          </button>
+        </div>
+        
+        <form id="enhanced-project-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-gray-700 font-semibold mb-2" for="project-name">Project Name</label>
+            <input id="project-name" name="project-name" type="text" required 
+              class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400" 
+              placeholder="My Awesome Video Project">
+          </div>
+          
+          <div>
+            <label class="block text-gray-700 font-semibold mb-2" for="project-description">Description</label>
+            <input id="project-description" name="project-description" type="text" 
+              class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400" 
+              placeholder="Brief description of your project">
+          </div>
+          
+          <div class="md:col-span-2">
+            <label class="block text-gray-700 font-semibold mb-2">Script Upload</label>
+            <div id="enhanced-dropzone" class="flex items-center justify-center w-full h-32 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 cursor-pointer transition hover:bg-blue-100 hover:border-blue-400">
+              <div class="text-center">
+                <i class="fas fa-cloud-upload-alt text-blue-400 text-3xl mb-2"></i>
+                <p id="enhanced-dropzone-text" class="text-blue-600 font-medium">Drag & drop your script file here, or click to browse</p>
+                <p class="text-gray-500 text-sm mt-1">Supports .txt, .md, .rtf files</p>
+              </div>
+              <input id="enhanced-file-input" type="file" accept=".txt,.md,.rtf" class="hidden" />
+            </div>
+          </div>
+          
+          <!-- Advanced Settings -->
+          <div class="md:col-span-2">
+            <button type="button" id="advanced-toggle" class="flex items-center text-blue-600 hover:text-blue-800 font-medium">
+              <i class="fas fa-chevron-down mr-2"></i>
+              Advanced Settings
+            </button>
+            
+            <div id="advanced-settings" class="hidden mt-4 p-4 bg-gray-50 rounded-lg">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-gray-700 text-sm font-medium mb-1">AI Providers</label>
+                  <div class="space-y-2">
+                    <label class="flex items-center">
+                      <input type="checkbox" name="providers" value="openai" checked class="mr-2">
+                      <span class="text-sm">OpenAI GPT-4</span>
+                    </label>
+                    <label class="flex items-center">
+                      <input type="checkbox" name="providers" value="claude" checked class="mr-2">
+                      <span class="text-sm">Claude Anthropic</span>
+                    </label>
+                    <label class="flex items-center">
+                      <input type="checkbox" name="providers" value="gemini" checked class="mr-2">
+                      <span class="text-sm">Google Gemini</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="block text-gray-700 text-sm font-medium mb-1">Target Duration (seconds)</label>
+                  <input type="number" id="target-duration" value="60" min="10" max="300" class="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-400">
+                </div>
+                
+                <div>
+                  <label class="block text-gray-700 text-sm font-medium mb-1">Shot Duration (seconds)</label>
+                  <input type="number" id="shot-duration" value="3" min="1" max="10" step="0.5" class="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-400">
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="md:col-span-2">
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition duration-200">
+              <i class="fas fa-magic mr-2"></i>Create AI Video Project
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Project Dashboard -->
+    <div id="project-dashboard" class="hidden">
+      <!-- Project Header -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 id="current-project-name" class="text-2xl font-bold text-gray-800">Project Name</h2>
+            <p id="current-project-status" class="text-gray-600 mt-1">Status: Processing</p>
+          </div>
+          <div class="flex space-x-2">
+            <button id="pause-project-btn" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
+              <i class="fas fa-pause mr-1"></i>Pause
+            </button>
+            <button id="restart-project-btn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+              <i class="fas fa-redo mr-1"></i>Restart
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced Progress Timeline -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h3 class="text-lg font-bold text-gray-800 mb-6">Production Pipeline</h3>
+        <div class="relative">
+          <div id="enhanced-progress-line" class="absolute top-6 left-0 h-0.5 bg-gray-200 transition-all duration-500"></div>
+          <div class="flex justify-between items-start">
+            <div class="pipeline-stage" data-stage="script_input">
+              <div class="stage-circle"><i class="fas fa-file-alt"></i></div>
+              <div class="stage-info">
+                <div class="font-medium text-sm">Script Input</div>
+                <div class="text-xs text-gray-500">Upload & validation</div>
+              </div>
+            </div>
+            <div class="pipeline-stage" data-stage="screenplay_generation">
+              <div class="stage-circle"><i class="fas fa-magic"></i></div>
+              <div class="stage-info">
+                <div class="font-medium text-sm">Screenplay</div>
+                <div class="text-xs text-gray-500">AI formatting</div>
+              </div>
+            </div>
+            <div class="pipeline-stage" data-stage="shot_division">
+              <div class="stage-circle"><i class="fas fa-cut"></i></div>
+              <div class="stage-info">
+                <div class="font-medium text-sm">Shot Division</div>
+                <div class="text-xs text-gray-500">Scene breakdown</div>
+              </div>
+            </div>
+            <div class="pipeline-stage" data-stage="character_design">
+              <div class="stage-circle"><i class="fas fa-users"></i></div>
+              <div class="stage-info">
+                <div class="font-medium text-sm">Characters</div>
+                <div class="text-xs text-gray-500">Design extraction</div>
+              </div>
+            </div>
+            <div class="pipeline-stage" data-stage="scene_generation">
+              <div class="stage-circle"><i class="fas fa-image"></i></div>
+              <div class="stage-info">
+                <div class="font-medium text-sm">Scene Gen</div>
+                <div class="text-xs text-gray-500">Image creation</div>
+              </div>
+            </div>
+            <div class="pipeline-stage" data-stage="video_generation">
+              <div class="stage-circle"><i class="fas fa-video"></i></div>
+              <div class="stage-info">
+                <div class="font-medium text-sm">Video Gen</div>
+                <div class="text-xs text-gray-500">Final rendering</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics Dashboard -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Progress</p>
+              <p id="overall-progress" class="text-2xl font-bold text-blue-600">0%</p>
+            </div>
+            <i class="fas fa-chart-line text-blue-600 text-2xl"></i>
+          </div>
+          <div class="mt-4">
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Processing Time</p>
+              <p id="processing-time" class="text-2xl font-bold text-green-600">0m</p>
+            </div>
+            <i class="fas fa-clock text-green-600 text-2xl"></i>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Estimated Cost</p>
+              <p id="estimated-cost" class="text-2xl font-bold text-purple-600">$0.00</p>
+            </div>
+            <i class="fas fa-dollar-sign text-purple-600 text-2xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Human Approval Interface -->
+      <div id="approval-section" class="bg-white rounded-lg shadow-md p-6 mb-8 hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-gray-800">
+            <i class="fas fa-hand-paper text-amber-500 mr-2"></i>
+            Human Approval Required
+          </h3>
+          <span id="approval-stage" class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium"></span>
+        </div>
+        
+        <div id="approval-content" class="mb-6">
+          <p class="text-gray-600 mb-4">Please review the generated content and approve to continue to the next stage.</p>
+          <div id="approval-preview" class="bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto">
+            <!-- Dynamic content will be loaded here -->
+          </div>
+        </div>
+        
+        <div class="flex space-x-4">
+          <button id="approve-btn" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition flex items-center">
+            <i class="fas fa-check mr-2"></i>Approve & Continue
+          </button>
+          <button id="request-changes-btn" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition flex items-center">
+            <i class="fas fa-edit mr-2"></i>Request Changes
+          </button>
+          <button id="pause-for-review-btn" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition flex items-center">
+            <i class="fas fa-pause mr-2"></i>Pause for Review
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Section -->
+      <div id="results-section" class="bg-white rounded-lg shadow-md p-6 hidden">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+          <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+          Video Generation Complete!
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 class="font-medium text-gray-700 mb-2">Final Video</h4>
+            <div class="aspect-video bg-black rounded-lg flex items-center justify-center">
+              <video id="final-video" controls class="w-full h-full rounded-lg">
+                <source src="" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </div>
+          
+          <div>
+            <h4 class="font-medium text-gray-700 mb-4">Project Assets</h4>
+            <div class="space-y-2">
+              <a id="download-video" href="#" class="flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+                <i class="fas fa-video text-blue-600 mr-3"></i>
+                <span>Download Final Video</span>
+              </a>
+              <a id="download-screenplay" href="#" class="flex items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition">
+                <i class="fas fa-file-alt text-green-600 mr-3"></i>
+                <span>Download Screenplay</span>
+              </a>
+              <a id="download-storyboard" href="#" class="flex items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
+                <i class="fas fa-images text-purple-600 mr-3"></i>
+                <span>Download Storyboard</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Projects -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Recent Projects</h3>
+      <div id="recent-projects" class="space-y-4">
+        <!-- Projects will be loaded dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <!-- n8n Import Modal -->
+  <div id="n8n-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold">Import n8n Workflow</h3>
+          <button id="close-n8n-modal" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-2">Upload Workflow JSON</label>
+          <input id="n8n-file-input" type="file" accept=".json" class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-400">
+        </div>
+        
+        <div class="flex justify-end space-x-4">
+          <button id="cancel-n8n-import" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+          <button id="import-n8n-workflow" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Import</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .pipeline-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 10;
+    }
+    
+    .stage-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #e5e7eb;
+      border: 3px solid #d1d5db;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      font-size: 18px;
+      transition: all 0.3s ease;
+    }
+    
+    .stage-circle.active {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    }
+    
+    .stage-circle.completed {
+      background: #10b981;
+      border-color: #10b981;
+      color: white;
+    }
+    
+    .stage-circle.pending {
+      background: #f59e0b;
+      border-color: #f59e0b;
+      color: white;
+    }
+    
+    .stage-info {
+      text-align: center;
+      margin-top: 8px;
+    }
+    
+    .stage-info .font-medium {
+      color: #374151;
+    }
+  </style>
+
+  <script>
+    // Global state
+    let currentProject = null;
+    let websocket = null;
+    let processingStartTime = null;
+
+    // Enhanced drag and drop
+    const enhancedDropzone = document.getElementById('enhanced-dropzone');
+    const enhancedFileInput = document.getElementById('enhanced-file-input');
+    const enhancedDropzoneText = document.getElementById('enhanced-dropzone-text');
+
+    enhancedDropzone.addEventListener('click', () => enhancedFileInput.click());
+    
+    enhancedDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      enhancedDropzone.classList.add('border-blue-500', 'bg-blue-100');
+    });
+    
+    enhancedDropzone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      enhancedDropzone.classList.remove('border-blue-500', 'bg-blue-100');
+    });
+    
+    enhancedDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      enhancedDropzone.classList.remove('border-blue-500', 'bg-blue-100');
+      enhancedFileInput.files = e.dataTransfer.files;
+      updateFileDisplay();
+    });
+    
+    enhancedFileInput.addEventListener('change', updateFileDisplay);
+
+    function updateFileDisplay() {
+      if (enhancedFileInput.files && enhancedFileInput.files[0]) {
+        const file = enhancedFileInput.files[0];
+        enhancedDropzoneText.innerHTML = `
+          <i class="fas fa-file-alt text-green-500 text-2xl"></i>
+          <p class="text-green-600 font-medium">${file.name}</p>
+          <p class="text-gray-500 text-sm">${(file.size / 1024).toFixed(1)} KB</p>
+        `;
+      }
+    }
+
+    // Advanced settings toggle
+    document.getElementById('advanced-toggle').addEventListener('click', function() {
+      const settings = document.getElementById('advanced-settings');
+      const icon = this.querySelector('i');
+      
+      if (settings.classList.contains('hidden')) {
+        settings.classList.remove('hidden');
+        icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+      } else {
+        settings.classList.add('hidden');
+        icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+      }
+    });
+
+    // Enhanced project creation
+    document.getElementById('enhanced-project-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('project-name').value;
+      const description = document.getElementById('project-description').value;
+      const file = enhancedFileInput.files[0];
+      
+      if (!file) {
+        alert('Please upload a script file.');
+        return;
+      }
+
+      try {
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating Project...';
+        submitBtn.disabled = true;
+
+        // Create project
+        const projectResponse = await axios.post('/api/v1/projects', {
+          name: name,
+          description: description,
+          user_id: 'demo_user'
+        });
+
+        const projectId = projectResponse.data.data.project_id;
+        
+        // Upload script
+        const formData = new FormData();
+        formData.append('file', file);
+        await axios.post(`/api/v1/projects/${projectId}/script`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        // Get selected providers
+        const providers = Array.from(document.querySelectorAll('input[name="providers"]:checked'))
+          .map(cb => cb.value);
+
+        // Start screenplay generation
+        await axios.post(`/api/v1/projects/${projectId}/screenplay/generate`, {
+          project_id: projectId,
+          use_providers: providers
+        });
+
+        // Update UI
+        currentProject = {
+          id: projectId,
+          name: name,
+          description: description
+        };
+
+        document.getElementById('current-project-name').textContent = name;
+        document.getElementById('project-dashboard').classList.remove('hidden');
+        
+        processingStartTime = Date.now();
+        connectWebSocket(projectId);
+        startStatusPolling(projectId);
+
+        // Reset form
+        this.reset();
+        enhancedDropzoneText.innerHTML = `
+          <i class="fas fa-cloud-upload-alt text-blue-400 text-3xl mb-2"></i>
+          <p class="text-blue-600 font-medium">Drag & drop your script file here, or click to browse</p>
+          <p class="text-gray-500 text-sm mt-1">Supports .txt, .md, .rtf files</p>
+        `;
+
+      } catch (error) {
+        console.error('Project creation failed:', error);
+        alert('Failed to create project. Please try again.');
+      } finally {
+        // Reset button
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+
+    // WebSocket connection
+    function connectWebSocket(projectId) {
+      const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      websocket = new WebSocket(`${wsProtocol}//${location.host}/ws/${projectId}`);
+      
+      websocket.onopen = function() {
+        console.log('WebSocket connected');
+      };
+      
+      websocket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        updateDashboard(data);
+      };
+      
+      websocket.onclose = function() {
+        console.log('WebSocket disconnected');
+        // Attempt to reconnect after 3 seconds
+        setTimeout(() => connectWebSocket(projectId), 3000);
+      };
+      
+      websocket.onerror = function(error) {
+        console.error('WebSocket error:', error);
+      };
+    }
+
+    // Status polling
+    async function startStatusPolling(projectId) {
+      const poll = async () => {
+        try {
+          const response = await axios.get(`/api/v1/projects/${projectId}`);
+          updateDashboard(response.data);
+        } catch (error) {
+          console.error('Status polling error:', error);
+        }
+        
+        // Continue polling if project is still processing
+        if (currentProject && !['completed', 'failed'].includes(currentProject.status)) {
+          setTimeout(poll, 3000);
+        }
+      };
+      
+      poll();
+    }
+
+    // Dashboard updates
+    function updateDashboard(data) {
+      if (!data) return;
+
+      // Update project status
+      const status = data.status || 'processing';
+      const stage = data.current_stage || 'script_input';
+      const progress = data.progress_percentage || 0;
+
+      document.getElementById('current-project-status').textContent = `Status: ${status}`;
+      document.getElementById('overall-progress').textContent = `${Math.round(progress)}%`;
+      document.getElementById('progress-bar').style.width = `${progress}%`;
+
+      // Update processing time
+      if (processingStartTime) {
+        const elapsed = Math.floor((Date.now() - processingStartTime) / 1000 / 60);
+        document.getElementById('processing-time').textContent = `${elapsed}m`;
+      }
+
+      // Update pipeline stages
+      updatePipelineStages(stage);
+
+      // Check for approval requirements
+      if (data.approval_required) {
+        showApprovalInterface(data);
+      }
+
+      // Check if completed
+      if (status === 'completed') {
+        showResults(data);
+      }
+    }
+
+    function updatePipelineStages(currentStage) {
+      const stages = document.querySelectorAll('.pipeline-stage');
+      const stageOrder = ['script_input', 'screenplay_generation', 'shot_division', 'character_design', 'scene_generation', 'video_generation'];
+      
+      const currentIndex = stageOrder.indexOf(currentStage);
+      
+      stages.forEach((stageElement, index) => {
+        const circle = stageElement.querySelector('.stage-circle');
+        circle.classList.remove('active', 'completed', 'pending');
+        
+        if (index < currentIndex) {
+          circle.classList.add('completed');
+        } else if (index === currentIndex) {
+          circle.classList.add('active');
+        } else {
+          circle.classList.add('pending');
+        }
+      });
+
+      // Update progress line
+      const progressLine = document.getElementById('enhanced-progress-line');
+      const progressPercent = ((currentIndex + 1) / stageOrder.length) * 100;
+      progressLine.style.width = `${progressPercent}%`;
+      progressLine.classList.add('bg-blue-500');
+    }
+
+    function showApprovalInterface(data) {
+      const approvalSection = document.getElementById('approval-section');
+      const approvalStage = document.getElementById('approval-stage');
+      const approvalPreview = document.getElementById('approval-preview');
+      
+      approvalSection.classList.remove('hidden');
+      approvalStage.textContent = data.current_stage?.replace('_', ' ').toUpperCase() || 'Review Required';
+      
+      // Load preview content based on stage
+      if (data.stage_data) {
+        approvalPreview.innerHTML = `<pre class="whitespace-pre-wrap text-sm">${JSON.stringify(data.stage_data, null, 2)}</pre>`;
+      }
+    }
+
+    function showResults(data) {
+      const resultsSection = document.getElementById('results-section');
+      resultsSection.classList.remove('hidden');
+      
+      // Hide approval section
+      document.getElementById('approval-section').classList.add('hidden');
+    }
+
+    // n8n Import Modal
+    document.getElementById('import-n8n-btn').addEventListener('click', function() {
+      document.getElementById('n8n-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('close-n8n-modal').addEventListener('click', function() {
+      document.getElementById('n8n-modal').classList.add('hidden');
+    });
+
+    document.getElementById('cancel-n8n-import').addEventListener('click', function() {
+      document.getElementById('n8n-modal').classList.add('hidden');
+    });
+
+    // Approval buttons
+    document.getElementById('approve-btn').addEventListener('click', async function() {
+      if (!currentProject) return;
+      
+      try {
+        await axios.post(`/api/v1/projects/${currentProject.id}/approve`, {
+          stage: document.getElementById('approval-stage').textContent.toLowerCase(),
+          approved: true
+        });
+        
+        document.getElementById('approval-section').classList.add('hidden');
+      } catch (error) {
+        console.error('Approval failed:', error);
+      }
+    });
+
+    // Load recent projects on page load
+    window.addEventListener('load', async function() {
+      try {
+        const response = await axios.get('/api/v1/projects');
+        const projects = response.data || [];
+        
+        const recentProjectsContainer = document.getElementById('recent-projects');
+        recentProjectsContainer.innerHTML = '';
+        
+        if (projects.length === 0) {
+          recentProjectsContainer.innerHTML = '<p class="text-gray-500 text-center py-8">No recent projects found.</p>';
+          return;
+        }
+        
+        projects.slice(0, 5).forEach(project => {
+          const projectElement = document.createElement('div');
+          projectElement.className = 'flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer';
+          projectElement.innerHTML = `
+            <div>
+              <h4 class="font-medium text-gray-800">${project.name}</h4>
+              <p class="text-sm text-gray-500">${new Date(project.created_at).toLocaleDateString()}</p>
+            </div>
+            <div class="text-right">
+              <span class="px-2 py-1 text-xs rounded-full ${getStatusColor(project.status)}">${project.status}</span>
+              <p class="text-sm text-gray-500 mt-1">${project.current_stage.replace('_', ' ')}</p>
+            </div>
+          `;
+          recentProjectsContainer.appendChild(projectElement);
+        });
+      } catch (error) {
+        console.error('Failed to load recent projects:', error);
+      }
+    });
+
+    function getStatusColor(status) {
+      switch (status) {
+        case 'completed': return 'bg-green-100 text-green-800';
+        case 'processing': return 'bg-blue-100 text-blue-800';
+        case 'failed': return 'bg-red-100 text-red-800';
+        case 'paused': return 'bg-yellow-100 text-yellow-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    }
+  </script>
+</body>
+</html>

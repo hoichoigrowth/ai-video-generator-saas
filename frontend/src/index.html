@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Generator SaaS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="root">
+        <div class="container mx-auto px-4 py-8">
+            <div class="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto">
+                <div class="text-center mb-8">
+                    <h1 class="text-4xl font-bold text-gray-800 mb-4">🎬 AI Video Generator SaaS</h1>
+                    <p class="text-xl text-gray-600 mb-6">Transform your scripts into professional videos using AI</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h3 class="font-semibold text-blue-800 mb-2">🤖 Multi-LLM Pipeline</h3>
+                            <p class="text-sm text-blue-600">GPT-4, Claude, and Gemini working together</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h3 class="font-semibold text-green-800 mb-2">🏠 Self-Hosted</h3>
+                            <p class="text-sm text-green-600">Complete data ownership and privacy</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <h3 class="font-semibold text-purple-800 mb-2">⚡ Production Ready</h3>
+                            <p class="text-sm text-purple-600">Scalable and enterprise-grade</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 rounded-lg p-6 mb-8">
+                    <h2 class="text-2xl font-semibold mb-4">🚀 System Status</h2>
+                    <div id="status-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-white p-3 rounded border">
+                            <div class="text-sm text-gray-600">Backend API</div>
+                            <div id="backend-status" class="font-semibold text-yellow-600">Checking...</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="text-sm text-gray-600">Database</div>
+                            <div id="db-status" class="font-semibold text-yellow-600">Checking...</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="text-sm text-gray-600">Storage</div>
+                            <div id="storage-status" class="font-semibold text-yellow-600">Checking...</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                            <div class="text-sm text-gray-600">AI Services</div>
+                            <div id="ai-status" class="font-semibold text-yellow-600">Checking...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4">📚 Quick Links</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <a href="http://localhost:8000/docs" target="_blank" class="block bg-blue-500 text-white p-4 rounded-lg hover:bg-blue-600 transition-colors">
+                            <h3 class="font-semibold mb-2">📖 API Documentation</h3>
+                            <p class="text-sm">FastAPI interactive documentation</p>
+                        </a>
+                        <a href="http://localhost:9001" target="_blank" class="block bg-green-500 text-white p-4 rounded-lg hover:bg-green-600 transition-colors">
+                            <h3 class="font-semibold mb-2">🗄️ File Storage</h3>
+                            <p class="text-sm">MinIO console for file management</p>
+                        </a>
+                        <a href="http://localhost:5555" target="_blank" class="block bg-purple-500 text-white p-4 rounded-lg hover:bg-purple-600 transition-colors">
+                            <h3 class="font-semibold mb-2">🌸 Task Monitor</h3>
+                            <p class="text-sm">Celery Flower for background tasks</p>
+                        </a>
+                        <a href="http://localhost:3001" target="_blank" class="block bg-orange-500 text-white p-4 rounded-lg hover:bg-orange-600 transition-colors">
+                            <h3 class="font-semibold mb-2">📊 Monitoring</h3>
+                            <p class="text-sm">Grafana dashboards and metrics</p>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="border-t pt-6">
+                    <h2 class="text-2xl font-semibold mb-4">🎥 Create Your First Video</h2>
+                    <div class="bg-blue-50 p-6 rounded-lg">
+                        <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                            <li>Upload your script using the API or file upload</li>
+                            <li>AI generates professional screenplay using multiple LLMs</li>
+                            <li>Automatic shot division optimized for vertical video</li>
+                            <li>Character extraction and design generation</li>
+                            <li>Scene rendering with Midjourney integration</li>
+                            <li>Final video assembly with Kling AI</li>
+                        </ol>
+                        <div class="mt-4">
+                            <button onclick="startWorkflow()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                🚀 Start Creating
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check system status
+        async function checkSystemStatus() {
+            const statusElements = {
+                'backend-status': 'backend',
+                'db-status': 'database', 
+                'storage-status': 'storage',
+                'ai-status': 'ai-services'
+            };
+            
+            try {
+                const response = await fetch('/health/detailed');
+                const health = await response.json();
+                
+                Object.entries(statusElements).forEach(([elementId, service]) => {
+                    const element = document.getElementById(elementId);
+                    const isHealthy = health.services?.[service]?.status === 'healthy';
+                    
+                    if (isHealthy) {
+                        element.textContent = '✅ Healthy';
+                        element.className = 'font-semibold text-green-600';
+                    } else {
+                        element.textContent = '❌ Unhealthy';
+                        element.className = 'font-semibold text-red-600';
+                    }
+                });
+            } catch (error) {
+                Object.keys(statusElements).forEach(elementId => {
+                    const element = document.getElementById(elementId);
+                    element.textContent = '⚠️ Unknown';
+                    element.className = 'font-semibold text-yellow-600';
+                });
+            }
+        }
+        
+        function startWorkflow() {
+            alert('🚀 AI Video Generator is ready! Use the API Documentation to start creating videos.');
+            window.open('/docs', '_blank');
+        }
+        
+        // Check status on load
+        document.addEventListener('DOMContentLoaded', checkSystemStatus);
+        
+        // Refresh status every 30 seconds
+        setInterval(checkSystemStatus, 30000);
+    </script>
+</body>
+</html>

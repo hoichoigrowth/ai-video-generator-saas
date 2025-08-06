@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install basic dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install minimal Python packages
+RUN pip install fastapi uvicorn asyncpg redis aiofiles psycopg2-binary sqlalchemy boto3 minio pydantic-settings
+
+# Copy simple application
+COPY ../simple_app.py app.py
+
+# Create logs directory
+RUN mkdir -p logs
+
+# Expose port
+EXPOSE 8000
+
+# Start application
+CMD ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

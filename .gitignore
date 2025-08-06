@@ -205,3 +205,28 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# AI Video Generator specific
+.env.production
+.env.staging
+.env.local
+docker-compose.override.yml
+logs/
+uploads/
+results/
+postgres_data/
+redis_data/
+minio_data/
+temp/
+
+# API keys and secrets (additional safeguards)
+*api_key*
+*secret_key*
+*password*
+*token*
+
+# Claude Code specific
+.claude/
+
+# Docker data volumes
+volumes/
