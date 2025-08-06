@@ -17,8 +17,8 @@ A complete, self-hosted AI-powered video generation SaaS platform that transform
 
 ```bash
 # Clone and setup
-git clone <repository-url>
-cd AI-video-generator
+git clone https://github.com/hoichoigrowth/ai-video-generator-saas.git
+cd ai-video-generator-saas
 
 # Configure environment (add your API keys)
 cp .env.example .env
