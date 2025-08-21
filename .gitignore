@@ -224,6 +224,15 @@ temp/
 *secret_key*
 *password*
 *token*
+api/.env
+
+# Node.js specific
+node_modules/
+frontend/node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Claude Code specific
 .claude/
