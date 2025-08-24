@@ -19,11 +19,49 @@
         <label class="block text-gray-700 font-semibold mb-2" for="project-name">Project Name</label>
         <input id="project-name" name="project-name" type="text" required class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Enter project name...">
       </div>
-      <div class="mb-4">
-        <label class="block text-gray-700 font-semibold mb-2">Upload Script</label>
-        <div id="dropzone" class="flex items-center justify-center w-full h-32 border-2 border-dashed border-blue-400 rounded bg-blue-50 cursor-pointer transition hover:bg-blue-100">
-          <span id="dropzone-text" class="text-blue-500">Drag & drop your script file here, or click to select</span>
-          <input id="file-input" type="file" accept=".txt,.md,.rtf" class="hidden" />
+      <!-- Script Upload Section -->
+      <div class="w-full max-w-4xl bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Upload Script</h2>
+        
+        <!-- File Upload Area -->
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6" id="drop-zone">
+          <div class="mb-4">
+            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+              <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <p class="text-lg text-gray-600 mb-2">Drag and drop your script file here</p>
+          <p class="text-sm text-gray-500 mb-4">or click to browse</p>
+          <p class="text-xs text-blue-600 font-medium">Supported formats: .txt, .md, .rtf, .doc, .docx, .pdf</p>
+          <input type="file" id="file-input" class="hidden" accept=".txt,.md,.rtf,.doc,.docx,.pdf">
+          <button type="button" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" onclick="document.getElementById('file-input').click()">
+            Choose File
+          </button>
+        </div>
+
+        <!-- File Info Display -->
+        <div id="file-info" class="hidden bg-gray-50 rounded-lg p-4 mb-4">
+          <h3 class="font-medium text-gray-800 mb-2">File Information</h3>
+          <div id="file-details" class="text-sm text-gray-600"></div>
+        </div>
+
+        <!-- Text Preview -->
+        <div id="text-preview" class="hidden bg-gray-50 rounded-lg p-4 mb-4">
+          <h3 class="font-medium text-gray-800 mb-2">Script Content Preview</h3>
+          <div class="bg-white border rounded p-3 max-h-40 overflow-y-auto">
+            <pre id="preview-content" class="text-sm text-gray-700 whitespace-pre-wrap"></pre>
+          </div>
+          <button id="extract-text-btn" class="mt-3 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+            Extract Full Text
+          </button>
+        </div>
+
+        <!-- Upload Progress -->
+        <div id="upload-progress" class="hidden">
+          <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+            <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%" id="progress-bar"></div>
+          </div>
+          <p class="text-sm text-gray-600" id="progress-text">Uploading...</p>
         </div>
       </div>
       <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700 transition">Create Project</button>
@@ -109,119 +147,231 @@
   </style>
   <script>
     // --- Drag & Drop ---
-    const dropzone = document.getElementById('dropzone');
+    const dropzone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
+    const fileInfo = document.getElementById('file-info');
+    const fileDetails = document.getElementById('file-details');
+    const textPreview = document.getElementById('text-preview');
+    const previewContent = document.getElementById('preview-content');
+    const extractTextBtn = document.getElementById('extract-text-btn');
+    const uploadProgress = document.getElementById('upload-progress');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+
     dropzone.addEventListener('click', () => fileInput.click());
-    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('bg-blue-100'); });
-    dropzone.addEventListener('dragleave', e => { e.preventDefault(); dropzone.classList.remove('bg-blue-100'); });
-    dropzone.addEventListener('drop', e => {
+
+    dropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
-      dropzone.classList.remove('bg-blue-100');
-      fileInput.files = e.dataTransfer.files;
-      document.getElementById('dropzone-text').textContent = fileInput.files[0].name;
-    });
-    fileInput.addEventListener('change', e => {
-      document.getElementById('dropzone-text').textContent = fileInput.files[0].name;
+      dropzone.classList.add('border-blue-400', 'bg-blue-50');
     });
 
-    // --- Project Creation & Upload ---
-    let currentProjectId = null;
-    document.getElementById('project-form').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const name = document.getElementById('project-name').value;
-      const file = fileInput.files[0];
-      if (!file) { alert('Please upload a script file.'); return; }
-      // Upload file
-      const formData = new FormData();
-      formData.append('file', file);
-      const uploadRes = await axios.post('/upload-script/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      currentProjectId = uploadRes.data.project_id;
-      // Create project
-      await axios.post('/projects/', { name });
-      document.getElementById('status-section').classList.remove('hidden');
-      connectWebSocket();
-      pollStatus();
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-blue-400', 'bg-blue-50');
     });
 
-    // --- Progress Timeline ---
-    const stages = [
-      'input',
-      'screenplay_formatted',
-      'screenplay_merged',
-      'shots_broken',
-      'characters_extracted',
-      'image_prompts_generated',
-      'final'
-    ];
-    function updateTimeline(currentStage) {
-      let found = false;
-      stages.forEach(stage => {
-        const dot = document.getElementById('stage-' + stage);
-        dot.classList.remove('active', 'completed');
-        if (stage === currentStage) {
-          dot.classList.add('active');
-          found = true;
-        } else if (!found) {
-          dot.classList.add('completed');
-        }
-      });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('border-blue-400', 'bg-blue-50');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      // Validate file type
+      const allowedTypes = ['.txt', '.md', '.rtf', '.doc', '.docx', '.pdf'];
+      const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+      
+      if (!allowedTypes.includes(fileExtension)) {
+        alert(`Please select a valid file type. Allowed: ${allowedTypes.join(', ')}`);
+        return;
+      }
+
+      // Show file info
+      displayFileInfo(file);
+      
+      // Show text preview for text files
+      if (['.txt', '.md', '.rtf'].includes(fileExtension)) {
+        showTextPreview(file);
+      } else {
+        // For binary files, show extract button
+        showExtractButton(file);
+      }
     }
 
-    // --- WebSocket for Real-Time Updates ---
+    function displayFileInfo(file) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      fileDetails.innerHTML = `
+        <div class="grid grid-cols-2 gap-2">
+          <div><strong>Name:</strong> ${file.name}</div>
+          <div><strong>Size:</strong> ${sizeMB} MB</div>
+          <div><strong>Type:</strong> ${file.type || 'Unknown'}</div>
+          <div><strong>Last Modified:</strong> ${new Date(file.lastModified).toLocaleDateString()}</div>
+        </div>
+      `;
+      fileInfo.classList.remove('hidden');
+    }
+
+    function showTextPreview(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        previewContent.textContent = content.substring(0, 500) + (content.length > 500 ? '...' : '');
+        textPreview.classList.remove('hidden');
+      };
+      reader.readAsText(file);
+    }
+
+    function showExtractButton(file) {
+      previewContent.textContent = 'Binary file - click "Extract Full Text" to process';
+      textPreview.classList.remove('hidden');
+      extractTextBtn.style.display = 'block';
+    }
+
+    // --- Project Creation ---
+    document.getElementById('project-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const projectName = document.getElementById('project-name').value;
+      
+      try {
+        const response = await axios.post('/projects/', {
+          name: projectName,
+          description: 'AI Video Generation Project'
+        });
+        
+        if (response.data.project_id) {
+          alert(`Project created successfully! ID: ${response.data.project_id}`);
+          document.getElementById('project-name').value = '';
+        }
+      } catch (error) {
+        console.error('Error creating project:', error);
+        alert('Failed to create project. Please try again.');
+      }
+    });
+
+    // --- File Upload with Progress ---
+    async function uploadFile(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      uploadProgress.classList.remove('hidden');
+      progressBar.style.width = '0%';
+      progressText.textContent = 'Uploading...';
+      
+      try {
+        const response = await axios.post('/upload-script/', formData, {
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            progressBar.style.width = percentCompleted + '%';
+            progressText.textContent = `Uploading... ${percentCompleted}%`;
+          }
+        });
+        
+        if (response.data.project_id) {
+          progressText.textContent = 'Upload successful!';
+          progressBar.style.width = '100%';
+          
+          // Store project ID for later use
+          window.currentProjectId = response.data.project_id;
+          
+          // Show success message
+          setTimeout(() => {
+            uploadProgress.classList.add('hidden');
+            alert(`File uploaded successfully! Project ID: ${response.data.project_id}`);
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        progressText.textContent = 'Upload failed!';
+        progressBar.style.width = '0%';
+        alert('Upload failed. Please try again.');
+      }
+    }
+
+    // --- Text Extraction ---
+    extractTextBtn.addEventListener('click', async () => {
+      if (!window.currentProjectId) {
+        alert('Please upload a file first.');
+        return;
+      }
+      
+      extractTextBtn.textContent = 'Extracting...';
+      extractTextBtn.disabled = true;
+      
+      try {
+        const response = await axios.get(`/extract-text/${window.currentProjectId}`);
+        
+        if (response.data.success) {
+          previewContent.textContent = response.data.text_content;
+          extractTextBtn.textContent = 'Text Extracted Successfully';
+          extractTextBtn.style.backgroundColor = '#059669';
+        } else {
+          alert(`Text extraction failed: ${response.data.error}`);
+          extractTextBtn.textContent = 'Extract Full Text';
+          extractTextBtn.disabled = false;
+        }
+      } catch (error) {
+        console.error('Text extraction error:', error);
+        alert('Failed to extract text. Please try again.');
+        extractTextBtn.textContent = 'Extract Full Text';
+        extractTextBtn.disabled = false;
+      }
+    });
+
+    // --- WebSocket Connection ---
     let ws = null;
-    function connectWebSocket() {
-      if (!currentProjectId) return;
-      ws = new WebSocket(`ws://${window.location.host}/ws/${currentProjectId}`);
-      ws.onmessage = function(event) {
+    
+    function connectWebSocket(projectId) {
+      ws = new WebSocket(`ws://localhost:8000/ws/${projectId}`);
+      
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+      };
+      
+      ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         updateStatus(data);
       };
-      ws.onclose = function() {
-        setTimeout(connectWebSocket, 2000);
+      
+      ws.onclose = () => {
+        console.log('WebSocket disconnected');
       };
     }
 
-    // --- Polling for Status ---
-    async function pollStatus() {
-      if (!currentProjectId) return;
-      try {
-        const res = await axios.get(`/status/${currentProjectId}`);
-        updateStatus(res.data);
-        setTimeout(pollStatus, 3000);
-      } catch (e) {
-        setTimeout(pollStatus, 5000);
-      }
-    }
-
-    // --- Status & Approval UI ---
     function updateStatus(data) {
-      document.getElementById('project-status').textContent = data.status;
-      updateTimeline(data.checkpoint);
-      // Approval interface
-      const approval = document.getElementById('approval-interface');
-      if (['screenplay_formatted','screenplay_merged','shots_broken','characters_extracted','image_prompts_generated'].includes(data.checkpoint)) {
-        approval.classList.remove('hidden');
-      } else {
-        approval.classList.add('hidden');
-      }
-      // Download
-      const download = document.getElementById('download-section');
-      if (data.status === 'final') {
-        download.classList.remove('hidden');
-        document.getElementById('download-link').href = `/download/${currentProjectId}`;
-      } else {
-        download.classList.add('hidden');
-      }
-      // Details
-      document.getElementById('status-details').textContent = `Checkpoint: ${data.checkpoint || ''}`;
+      // Update progress timeline based on status
+      console.log('Status update:', data);
     }
 
-    document.getElementById('approve-btn').onclick = async function() {
-      await axios.post(`/webhook/approval/${currentProjectId}`, { approved: true, checkpoint: stages[stages.indexOf(document.getElementById('project-status').textContent)+1] });
-    };
-    document.getElementById('pause-btn').onclick = async function() {
-      await axios.post(`/webhook/approval/${currentProjectId}`, { approved: false, checkpoint: document.getElementById('project-status').textContent });
-    };
+    // --- Progress Timeline ---
+    function updateProgressStage(stage, status) {
+      const stageElement = document.querySelector(`[data-stage="${stage}"]`);
+      if (stageElement) {
+        const statusDot = stageElement.querySelector('.status-dot');
+        const statusText = stageElement.querySelector('.status-text');
+        
+        if (status === 'completed') {
+          statusDot.classList.remove('bg-gray-300', 'bg-yellow-400');
+          statusDot.classList.add('bg-green-500');
+          statusText.textContent = 'Completed';
+          statusText.classList.remove('text-gray-500', 'text-yellow-600');
+          statusText.classList.add('text-green-600');
+        } else if (status === 'in-progress') {
+          statusDot.classList.remove('bg-gray-300', 'bg-green-500');
+          statusDot.classList.add('bg-yellow-400');
+          statusText.textContent = 'In Progress';
+          statusText.classList.remove('text-gray-500', 'text-green-600');
+          statusText.classList.add('text-yellow-600');
+        }
+      }
+    }
   </script>
 </body>
 </html>
